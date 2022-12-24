@@ -1,49 +1,24 @@
 pipeline {
-    agent  { label 'JDK11' }   
+    agent { label 'JDK11' }
     stages {
         stage('vcs') {
             steps {
-                   mail subject: 'build started',
-                     body: 'build started',
-                     to: 'qtdevops@gmail.com'
-                git branch: "master", url: 'https://github.com/satishnamgadda/openmrs-core.git'
+                git branch: 'SPRINT_1_DEV', url: 'https://github.com/satishnamgadda/openmrs-core.git'
             }
         }
-
-        stage('artifactory configuaration') {
+        stage('build') {
             steps {
-                rtMavenDeployer (
-                   id : "MVN_DEFAULT",
-                   releaseRepo : "omrs-libs-release-local",
-                   snapshotRepo : "omrs-libs-snapshot-local",
-                   serverId : "JFROG_OMRS"
-                )
-
+                sh '/usr/share/maven/bin/mvn package'
             }
         }
-        stage('Exec Maven') {
+        stage('archive artifacts') {
             steps {
-                rtMavenRun(
-                    pom : "pom.xml",
-                    goals : "clean install",
-                    tool : "mvn",
-                    deployerId : "MVN_DEFAULT"
-                )
-          
+                archiveArtifacts artifacts: 'target/*.jar', followSymlinks: false
             }
         }
-    //    stage('Build the Code') {
-    //        steps {
-    //           withSonarQubeEnv('SONAR') {
-    //                sh script: 'mvn clean package sonar:sonar'
-    //           }
-    //        }
-    //    }
-        stage('publish build info') {
+        stage('test results') {
             steps {
-               rtPublishBuildInfo(
-                serverId : "JFROG_OMRS"
-               )
+                junit '**/surefire-reports/*.xml'
             }
         }
     }
